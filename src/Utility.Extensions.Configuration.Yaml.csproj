@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Version>1.0.0</Version>
+    <Authors>JP Dillingham</Authors>
+    <Product>Utility.Extensions.Configuration.Yaml</Product>
+    <PackageProjectUrl>https://github.com/jpdillingham/Utility.Extensions.Configuration.Yaml</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Description>A C# .NET Class Library containing an IConfigurationSource for Yaml files.</Description>
+    <Copyright>Copyright (c) JP Dillingham (jp@dillingham.ws)</Copyright>
+    <RepositoryUrl>https://github.com/jpdillingham/Utility.EnvironmentVariables</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>csharp yaml iconfigurationsource configuration addyamlfile dotnet</PackageTags>
+    <NeutralLanguage>en-US</NeutralLanguage>
+  </PropertyGroup>
+</Project>
