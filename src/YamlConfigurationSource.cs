@@ -1,13 +1,43 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.FileProviders;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using YamlDotNet.Core;
-using YamlDotNet.RepresentationModel;
+﻿/*
+  █▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀ ▀▀▀▀▀▀▀▀▀▀▀▀▀▀ ▀▀▀  ▀  ▀      ▀▀
+  █  The MIT License (MIT)
+  █
+  █  Copyright (c) 2021 JP Dillingham (jp@dillingham.ws)
+  █
+  █  Permission is hereby granted, free of charge, to any person obtaining a copy
+  █  of this software and associated documentation files (the "Software"), to deal
+  █  in the Software without restriction, including without limitation the rights
+  █  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  █  copies of the Software, and to permit persons to whom the Software is
+  █  furnished to do so, subject to the following conditions:
+  █
+  █  The above copyright notice and this permission notice shall be included in all
+  █  copies or substantial portions of the Software.
+  █
+  █  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  █  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  █  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  █  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  █  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  █  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  █  SOFTWARE.
+  █
+  ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀  ▀▀ ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀██
+                                                                                               ██
+                                                                                           ▀█▄ ██ ▄█▀
+                                                                                             ▀████▀
+                                                                                               ▀▀                            */
 
 namespace Utility.Extensions.Configuration.Yaml
 {
+    using Microsoft.Extensions.Configuration;
+    using Microsoft.Extensions.FileProviders;
+    using System;
+    using System.IO;
+    using System.Linq;
+    using YamlDotNet.Core;
+    using YamlDotNet.RepresentationModel;
+
     /// <summary>
     ///     Extension methods for adding <see cref="YamlConfigurationProvider"/>.
     /// </summary>
@@ -121,7 +151,7 @@ namespace Utility.Extensions.Configuration.Yaml
         /// <param name="source">The source settings.</param>
         public YamlConfigurationProvider(YamlConfigurationSource source) : base(source) { }
 
-        private Dictionary<string, string> InternalData { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+        private string[] NullValues { get; } = new[] { "~", "null", "" };
 
         /// <summary>
         ///     Loads the YAML data from a stream.
@@ -131,16 +161,14 @@ namespace Utility.Extensions.Configuration.Yaml
         {
             try
             {
-                var yaml = new YamlStream();
                 using var reader = new StreamReader(stream);
 
+                var yaml = new YamlStream();
                 yaml.Load(reader);
 
                 var rootNode = (YamlMappingNode)yaml.Documents[0].RootNode;
 
                 Traverse(rootNode);
-
-                Data = InternalData;
             }
             catch (YamlException e)
             {
@@ -148,23 +176,30 @@ namespace Utility.Extensions.Configuration.Yaml
             }
         }
 
-        private void Traverse(YamlMappingNode root, string path = "")
+        private void Traverse(YamlNode root, string path = null)
         {
-            string GetKey(KeyValuePair<YamlNode, YamlNode> node) 
-                => ConfigurationPath.Combine(path, ((YamlScalarNode)node.Key).Value);
-
-            foreach (var node in root.Children)
+            if (root is YamlScalarNode scalar)
             {
-                if (node.Value is YamlScalarNode)
+                if (Data.ContainsKey(path))
                 {
-                    Console.WriteLine($"{GetKey(node)} = {node.Value.ToString()}");
-                    InternalData[GetKey(node)] = node.Value.ToString();
+                    throw new FormatException($"A duplicate key '{path}' was found.");
                 }
 
-                if (node.Value is YamlMappingNode mappingNode)
+                Data[path] = NullValues.Contains(scalar.Value.ToLower()) ? null : scalar.Value;
+            }
+            else if (root is YamlMappingNode map)
+            {
+                foreach (var node in map.Children)
                 {
-                    path += GetKey(node);
-                    Traverse((YamlMappingNode)node.Value, path);
+                    var key = ((YamlScalarNode)node.Key).Value;
+                    Traverse(node.Value, path == null ? key : ConfigurationPath.Combine(path, key));
+                }
+            }
+            else if (root is YamlSequenceNode sequence)
+            {
+                for (int i = 0; i < sequence.Children.Count(); i++)
+                {
+                    Traverse(sequence.Children[i], ConfigurationPath.Combine(path, i.ToString()));
                 }
             }
         }
