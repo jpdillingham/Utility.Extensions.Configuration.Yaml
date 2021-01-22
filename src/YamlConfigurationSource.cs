@@ -178,20 +178,22 @@ namespace Utility.Extensions.Configuration.Yaml
 
         private void Traverse(YamlNode root, string path = null)
         {
+            static string Clean(string str) => str?.Replace("_", string.Empty).Replace("-", string.Empty);
+
             if (root is YamlScalarNode scalar)
             {
-                if (Data.ContainsKey(path))
+                if (Data.ContainsKey(Clean(path)))
                 {
-                    throw new FormatException($"A duplicate key '{path}' was found.");
+                    throw new FormatException($"A duplicate key '{Clean(path)}' was found.");
                 }
 
-                Data[path] = NullValues.Contains(scalar.Value.ToLower()) ? null : scalar.Value;
+                Data[Clean(path)] = NullValues.Contains(scalar.Value.ToLower()) ? null : scalar.Value;
             }
             else if (root is YamlMappingNode map)
             {
                 foreach (var node in map.Children)
                 {
-                    var key = ((YamlScalarNode)node.Key).Value;
+                    var key = Clean(((YamlScalarNode)node.Key).Value);
                     Traverse(node.Value, path == null ? key : ConfigurationPath.Combine(path, key));
                 }
             }
