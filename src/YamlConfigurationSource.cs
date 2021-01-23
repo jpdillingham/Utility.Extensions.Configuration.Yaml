@@ -187,7 +187,12 @@ namespace Utility.Extensions.Configuration.Yaml
                     throw new FormatException($"A duplicate key '{Clean(path)}' was found.");
                 }
 
-                Data[Clean(path)] = NullValues.Contains(scalar.Value.ToLower()) ? null : scalar.Value;
+                var value = NullValues.Contains(scalar.Value.ToLower()) ? null : scalar.Value;
+
+                if (value != null)
+                {
+                    Data[Clean(path)] = NullValues.Contains(scalar.Value.ToLower()) ? null : scalar.Value;
+                }
             }
             else if (root is YamlMappingNode map)
             {
